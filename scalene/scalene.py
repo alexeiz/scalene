@@ -93,7 +93,7 @@ class Scalene():
             Scalene.cpu_timer_signal = signal.ITIMER_REAL
         else:
             Scalene.cpu_timer_signal = signal.ITIMER_VIRTUAL
-            
+
         # Now set the appropriate timer signal.
         if Scalene.cpu_timer_signal == signal.ITIMER_REAL:
             Scalene.cpu_signal  = signal.SIGALRM
@@ -113,8 +113,8 @@ class Scalene():
         # Turn on the CPU profiling timer to run every signal_interval seconds.
         signal.setitimer(Scalene.cpu_timer_signal, Scalene.mean_signal_interval, Scalene.mean_signal_interval)
         Scalene.last_signal_time = Scalene.gettime()
-        
-    
+
+
     @staticmethod
     def gettime():
         """High-precision timer of time spent running in or on behalf of this process."""
@@ -231,7 +231,7 @@ class Scalene():
         """Complete profiling."""
         Scalene.disable_signals()
         Scalene.elapsed_time = Scalene.gettime() - Scalene.elapsed_time
-        os.chdir(Scalene.original_path) 
+        os.chdir(Scalene.original_path)
 
     @staticmethod
     @contextmanager
@@ -251,7 +251,7 @@ class Scalene():
         if Scalene.total_cpu_samples == 0 and Scalene.total_memory_malloc_samples == 0 and Scalene.total_memory_free_samples == 0:
             # Nothing to output.
             return False
-        
+
         # If I have at least one memory sample, then we are profiling memory.
         did_sample_memory = (Scalene.total_memory_free_samples + Scalene.total_memory_malloc_samples) > 1
         # Collect all instrumented filenames.
@@ -368,16 +368,21 @@ class Scalene():
                 profiler = Scalene(os.path.join(program_path, os.path.basename(args.prog)))
                 try:
                     profiler.start()
+
+                    def output_profiles():
+                        profiler.stop()
+                        # Go back home.
+                        # os.chdir(Scalene.original_path)
+                        # If we've collected any samples, dump them.
+                        if profiler.output_profiles():
+                            pass
+                        else:
+                            print("Scalene: Program did not run for long enough to profile.")
+
+                    atexit.register(output_profiles)
+
                     # Run the code being profiled.
                     exec(code, the_globals)
-                    profiler.stop()
-                    # Go back home.
-                    # os.chdir(Scalene.original_path)
-                    # If we've collected any samples, dump them.
-                    if profiler.output_profiles():
-                        pass
-                    else:
-                        print("Scalene: Program did not run for long enough to profile.")
                 except Exception as ex:
                     template = "Scalene: An exception of type {0} occurred. Arguments:\n{1!r}"
                     message = template.format(type(ex).__name__, ex.args)
